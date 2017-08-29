@@ -1,0 +1,38 @@
+{
+  "name": "mapbox-gl-round-drawer",
+  "version": "0.0.1",
+  "description": "mapbox-gl-round-drawer",
+  "main": "src/index.js",
+  "scripts": {
+    "watch": "./node_modules/webpack/bin/webpack.js --config ./webpack.config.js --watch -d",
+    "development": "./node_modules/webpack/bin/webpack.js --config ./webpack.config.js -d",
+    "dev": "npm run development",
+    "production": "./node_modules/webpack/bin/webpack.js --config ./webpack.config.js -p",
+    "prod": "npm run production"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/shohei-ot/mapbox-gl-round-drawer.git"
+  },
+  "keywords": [
+    "mapbox-gl",
+    "ES6",
+    "Babel",
+    "webpack"
+  ],
+  "author": "shohei-ot",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/shohei-ot/mapbox-gl-round-drawer/issues"
+  },
+  "homepage": "https://github.com/shohei-ot/mapbox-gl-round-drawer#readme",
+  "eslintConfig": ".eslintrc.js",
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.1",
+    "babel-preset-env": "^1.6.0"
+  },
+  "dependencies": {
+    "@turf/turf": "^4.6.1"
+  }
+}
