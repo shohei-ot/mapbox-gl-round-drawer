@@ -13,8 +13,6 @@
   const _detect = (val) => {
     return Object.prototype.toString.call(val).replace(/\[object\s([^\]]+)\]/, '$1');
   };
-  const isObject = val => _detect(val).toLowerCase() === 'object';
-  const isArray = val => _detect(val).toLowerCase() === 'array';
 
   const empty = { type: 'FeatureCollection', features: [] };
 
@@ -118,6 +116,37 @@
           'fill-color': 'rgba(255,0,0,.2)',
         }
       });
+      map.addSource(`radius-handler-${drawerId}`, {
+        type: 'geojson',
+        data: empty
+      });
+      map.addLayer({
+        id: `radius-handler-${drawerId}`,
+        source: `radius-handler-${drawerId}`,
+        type: 'circle',
+        paint: {
+          'circle-color': 'rgba(255,0,0,.6)',
+          'circle-radius': 6
+        }
+      });
+      map.addLayer({
+        id: `radius-viewer-${drawerId}`,
+        source: `center-${drawerId}`,
+        type: 'symbol',
+        layout: {
+          'text-field': '{radius_text}',
+          'text-offset': [0, -2],
+          'text-allow-overlap': true,
+          'text-padding': 8
+        },
+        paint: {
+          'text-color': 'rgba(0,0,0,.8)',
+          // 1文字毎にサイズ違う…
+          // 'text-halo-color': 'rgba(255,255,255,.8)',
+          'text-halo-color': '#fff',
+          'text-halo-width': 3,
+        }
+      });
       this._initDrawRoundMapStatus = true;
       this._initMapEvent();
     }
@@ -140,12 +169,13 @@
         map.getCanvasContainer().style.cursor = hasFeature ? 'pointer' : '';
         if (mouseDownRoundCenter) {
           // console.log('latestCenter', e);
-          const latestCenter = turf.point([e.lngLat.lng, e.lngLat.lat]);
+          const latestCenter = turf.point([e.lngLat.lng, e.lngLat.lat], {radius_text: self._getFormattedRadiusLabel(self._data.currentRadius)});
           self.setCenter(latestCenter);
           const latestRound = self.genCircle(latestCenter, self._data.currentRadius);
           self.setRound(latestRound);
           const latestDrgPoint = self.genDestination(latestCenter, self._data.currentRadius);
           self.setDrgPoint(latestDrgPoint);
+          // self._updateRadiusValue();
         }
         // console.log('mouseMoveEnd');
       };
@@ -184,6 +214,7 @@
 
     fireRoundUpdate() {
       const self = this;
+      // self._updateRadiusValue();
       const map = self.getMap();
       map.fire('round.update', {
         id: self.getDrawerId(),
@@ -201,8 +232,7 @@
       if (!centerLngLatLike) throw new Error('requried lngLatLike');
       const centerLngLat = map.unproject(map.project(centerLngLatLike));
       const drawerId = self.getDrawerId();
-      self.setCenter(turf.point([centerLngLat.lng, centerLngLat.lat]));
-
+      
       // TODO: defaultの半径は、 0 ~ canvasの高さ を map.projcet でpointにして、距離を計算して利用する
       const bounds = map.getBounds();
       // const top = bounds.sw.lat, bounds.ne.lat
@@ -210,13 +240,15 @@
       const hr1 = [Math.max.apply(null, [bounds._sw.lng, bounds._ne.lng]), Math.max.apply(null, [bounds._sw.lat, bounds._ne.lat])];
       const hr2 = [Math.min.apply(null, [bounds._sw.lng, bounds._ne.lng]), Math.max.apply(null, [bounds._sw.lat, bounds._ne.lat])];
       const hrDistance = turf.distance(hr1, hr2); // lm
-
+      
       const vr1 = [Math.max.apply(null, [bounds._sw.lng, bounds._ne.lng]), Math.max.apply(null, [bounds._sw.lat, bounds._ne.lat])];
       const vr2 = [Math.max.apply(null, [bounds._sw.lng, bounds._ne.lng]), Math.min.apply(null, [bounds._sw.lat, bounds._ne.lat])];
       const vrDistance = turf.distance(vr1, vr2);
-
+      
       // set initial radius
       self._data.currentRadius = Math.min.apply(null, [hrDistance, vrDistance]) / 3 / 2;
+
+      self.setCenter(turf.point([centerLngLat.lng, centerLngLat.lat], {radius_text: self._getFormattedRadiusLabel(self._data.currentRadius)}));
 
       const roundPoly = turf.circle(
         turf.point([centerLngLat.lng, centerLngLat.lat]),
@@ -235,7 +267,7 @@
       drgEl.style.height = '12px';
       drgEl.style.borderRadius = '50%';
       drgEl.style.cursor = 'pointer';
-      drgEl.style.backgroundColor = 'rgba(255,0,0,.6)';
+      // drgEl.style.backgroundColor = 'rgba(255,0,0,.6)';
 
       let drgElMousedown = false;
       let dragStartScreenX = null;
@@ -262,6 +294,8 @@
           self._data.currentRadius = latestRadius;
           const drgPoint = self.genDestination(roundCenter, latestRadius);
           self.setDrgPoint(drgPoint);
+          // self._updateRadiusValue();
+          self.updateRadiusLabel();
         }
       };
       const mouseUpEv = (e) => {
@@ -295,13 +329,62 @@
         90,
         self._options.units
       );
+      map.getSource('radius-handler-' + drawerId).setData(self._geojson.drgPoint);
       self._drgMarker = new window.mapboxgl.Marker(drgEl)
         // .setLngLat(centerLngLat)
         .setLngLat(self._geojson.drgPoint.geometry.coordinates)
         .addTo(map);
+
+      // self._showRadiusValue();
       self.fireRoundUpdate();
     }
-    
+
+    // _showRadiusValue() {
+    //   const self = this;
+    //   const map = self.getMap();
+
+    //   self._radiusMarkerEl = document.createElement('div');
+    //   self._radiusMarkerEl.classList = 'mapbox-gl-rpimd-drawer-radius-value';
+
+    //   self._radiusMarker = new mapboxgl.Marker(self._radiusMarkerEl, {
+    //     offset: [0, -10]
+    //   }).setLngLat(self.getRoundCenter().geometry.coordinates)
+    //     .addTo(map);
+    //   self._updateRadiusValue();
+    // }
+
+    // _updateRadiusValue() {
+    //   console.log('> _updateRadiusValue');
+    //   const self = this;
+    //   self._radiusMarker.setLngLat(self.getRoundCenter().geometry.coordinates);
+
+    //   let units = '';
+    //   switch (self._options.units) {
+    //     case 'kilometers':
+    //       units = 'km';
+    //       break;
+    //     case 'meters':
+    //     case 'meter':
+    //       units = 'm';
+    //       break;
+    //     default:
+    //       units = self._options.units;
+    //   }
+    //   const radius = self.numberFormat( Math.floor(self._data.currentRadius * 10)/10 );
+    //   const value = `${radius} ${units}`;
+    //   self._radiusMarkerEl.innerHTML = value;
+    // }
+
+    // _dropRadiusValue() {
+    //   const self = this;
+    //   self._radiusMarker.remove();
+    //   delete self._radiusMarker;
+    // }
+
+    numberFormat(num) {
+      return String(num).replace( /(\d)(?=(\d\d\d)+(?!\d))/g, '$1,');
+    }
+
     _getRadiusFromXDiff(xDiff, firstDragPoint) {
       const self = this;
       const map = self.getMap();
@@ -319,6 +402,32 @@
       const map = self.getMap();
       self._geojson.round = geojson;
       map.getSource(self.getDrawerId()).setData(self._geojson.round);
+    }
+
+    _getFormattedRadiusLabel(radius) {
+      const self = this;
+      let units = '';
+      switch (self._options.units) {
+        case 'kilometers':
+          units = 'km';
+          break;
+        case 'meters':
+        case 'meter':
+          units = 'm';
+          break;
+        default:
+          units = self._options.units;
+      }
+      return '半径'+(Math.floor(radius * 10) / 10) + '' + units;
+    }
+    updateRadiusLabel() {
+      const self = this;
+      const map = self.getMap();
+      // set radius label
+      const geojson = self.getRoundCenter();
+      geojson.properties.radius_text = self._getFormattedRadiusLabel(self._data.currentRadius);
+      // console.log('self._data.currentRadius', self._data.currentRadius);
+      self.setCenter(geojson);
     }
     setCenter(geojson) {
       const self = this;
@@ -341,6 +450,7 @@
     setDrgPoint(geojson) {
       const self = this;
       self._geojson.drgPoint = geojson;
+      self.getMap().getSource('radius-handler-' + self.getDrawerId()).setData(self._geojson.drgPoint);
       self._drgMarker.setLngLat(geojson.geometry.coordinates);
     }
     dropRound() {
@@ -354,8 +464,11 @@
       self._geojson.round = null;
       self.setCenter(empty);
       self._geojson.center = null;
+      self.setDrgPoint(empty);
+      self._geojson.drgPoint = null;
       self._drgMarker.remove();
       // self._dropMapEvent();
+      // self._dropRadiusValue();
     }
 
     getRadius() {
