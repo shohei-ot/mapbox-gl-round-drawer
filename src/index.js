@@ -1,5 +1,5 @@
 (() => {
-  const turf = require('@turf/turf');
+  // const turf = require('@turf/turf');
   const randStr = (len = 32) => {
     var text = '';
     var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -17,7 +17,7 @@
   const empty = { type: 'FeatureCollection', features: [] };
 
   class RoundDrawer {
-    constructor(options = {}) {
+    constructor(turf, options = {}) {
       const self = this;
       self._id = randStr();
 
@@ -91,8 +91,9 @@
         source: `center-${drawerId}`,
         type: 'circle',
         paint: {
-          'circle-color': 'rgba(255,0,0,.6)',
-          'circle-radius': 6
+          // 'circle-color': 'rgba(255,0,0,.6)',
+          'circle-color': 'rgba(27, 162, 236, 0.8)',
+          'circle-radius': 12
         }
       });
       map.addSource(drawerId, {
@@ -104,7 +105,8 @@
         source: drawerId,
         type: 'line',
         paint: {
-          'line-color': 'rgba(255,0,0,.6)',
+          // 'line-color': 'rgba(255,0,0,.6)',
+          'line-color': 'rgba(27, 162, 236, 0.8)',
           'line-width': 2
         }
       });
@@ -113,7 +115,8 @@
         source: drawerId,
         type: 'fill',
         paint: {
-          'fill-color': 'rgba(255,0,0,.2)',
+          // 'fill-color': 'rgba(255,0,0,.2)',
+          'fill-color': 'rgba(29, 183, 212, 0.31)',
         }
       });
       map.addSource(`radius-handler-${drawerId}`, {
@@ -125,8 +128,9 @@
         source: `radius-handler-${drawerId}`,
         type: 'circle',
         paint: {
-          'circle-color': 'rgba(255,0,0,.6)',
-          'circle-radius': 6
+          // 'circle-color': 'rgba(255,0,0,.6)',
+          'circle-color': 'rgba(27, 162, 236, 0.8)',
+          'circle-radius': 12
         }
       });
       map.addLayer({
@@ -263,8 +267,10 @@
 
       // draggable circle
       let drgEl = document.createElement('div');
-      drgEl.style.width = '12px';
-      drgEl.style.height = '12px';
+      // drgEl.style.width = '12px';
+      // drgEl.style.height = '12px';
+      drgEl.style.width = '24px';
+      drgEl.style.height = '24px';
       drgEl.style.borderRadius = '50%';
       drgEl.style.cursor = 'pointer';
       // drgEl.style.backgroundColor = 'rgba(255,0,0,.6)';
@@ -418,7 +424,9 @@
         default:
           units = self._options.units;
       }
-      return '半径'+(Math.floor(radius * 10) / 10) + '' + units;
+      // let label = Number(Math.floor(radius * 100) / 100).toFixed(2);
+      let label = Number(Math.floor(radius * 10) / 10).toFixed(1);
+      return '半径'+label+units;
     }
     updateRadiusLabel() {
       const self = this;
@@ -451,6 +459,7 @@
       const self = this;
       self._geojson.drgPoint = geojson;
       self.getMap().getSource('radius-handler-' + self.getDrawerId()).setData(self._geojson.drgPoint);
+      if (geojson.type == 'FeatureCollection') return;
       self._drgMarker.setLngLat(geojson.geometry.coordinates);
     }
     dropRound() {
