@@ -33,7 +33,7 @@ map.on('round.update', (e) => {
 ```js
 
 const RoundDrawer = require('mapbox-gl-drawer');
-const turf        = require('@turf/turf);
+const turf        = require('@turf/turf');
 
 mapboxgl.accessToken = '<token>';
 const map = new mapboxgl.Map({
